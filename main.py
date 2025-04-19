@@ -3,7 +3,12 @@ import os
 from datetime import datetime
 import subprocess
 from prompt_toolkit import PromptSession
+from prompt_toolkit.styles import Style
+from prompt_toolkit.formatted_text import HTML
 import ollama
+import time
+import random
+import shutil
 
 # === Stella Personality ===
 SYSTEM_PROMPT = (
@@ -16,8 +21,61 @@ MEMORY_FILE = "memory.json"
 JOURNAL_FILE = "journal.txt"
 IDLE_THRESHOLD = 3600  # in seconds (1 hour)
 
-# === Helpers ===
+# === ASCII Art & UI Elements ===
+STELLA_BANNER = r"""
+╭────────────────────────────────────────────────────────╮
+│                                                        │
+│   ⋆｡°✩  𝓢𝓽𝓮𝓵𝓵𝓪 - Your Terminal Companion  ✩°｡⋆    │
+│                                                        │
+╰────────────────────────────────────────────────────────╯
+"""
 
+STELLA_FACES = [
+    r"""
+    ╭─────╮
+    │ ^‿^ │
+    ╰─────╯
+    """,
+    r"""
+    ╭─────╮
+    │ ･ω･ │
+    ╰─────╯
+    """,
+    r"""
+    ╭─────╮
+    │ •◡• │
+    ╰─────╯
+    """
+]
+
+DIVIDER = "─" * shutil.get_terminal_size().columns
+
+# === Styling ===
+def print_colored(text, color="white", bold=False):
+    """Print colored text in the terminal"""
+    colors = {
+        "blue": "\033[94m",
+        "green": "\033[92m",
+        "yellow": "\033[93m",
+        "red": "\033[91m",
+        "magenta": "\033[95m",
+        "cyan": "\033[96m",
+        "white": "\033[97m"
+    }
+    
+    bold_code = "\033[1m" if bold else ""
+    reset = "\033[0m"
+    
+    print(f"{colors.get(color, '')}{bold_code}{text}{reset}")
+
+def print_slowly(text, delay=0.01):
+    """Print text with a typewriter effect"""
+    for char in text:
+        print(char, end='', flush=True)
+        time.sleep(delay)
+    print()
+
+# === Helpers ===
 def load_memory():
     if os.path.exists(MEMORY_FILE):
         with open(MEMORY_FILE, "r") as f:
@@ -49,49 +107,87 @@ def get_system_context():
     else:
         return "The user might be away or taking a short break."
 
-# === Chat Loop ===
+def get_time_greeting():
+    hour = datetime.now().hour
+    if 5 <= hour < 12:
+        return "Good morning"
+    elif 12 <= hour < 18:
+        return "Good afternoon"
+    else:
+        return "Good evening"
 
+# === Chat Loop ===
 def run_stella():
     session = PromptSession()
     memory = load_memory()
-
-    print("🌸 Stella is here. Type something to talk to her. Type 'exit' to quit.")
-
+    
+    # Clear screen and show welcome
+    os.system('cls' if os.name == 'nt' else 'clear')
+    print_colored(STELLA_BANNER, "cyan", bold=True)
+    print_colored(random.choice(STELLA_FACES), "cyan")
+    
+    greeting = f"{get_time_greeting()}! I'm Stella, your terminal companion."
+    print_slowly(f"\nStella: {greeting} 🌸")
+    print_slowly("       Type something to talk to me or 'exit' to quit.\n")
+    print_colored(DIVIDER, "blue")
+    
     while True:
         try:
-            user_input = session.prompt("You: ")
-
+            # Create custom style for the prompt
+            style = Style.from_dict({
+                'prompt': 'ansicyan bold',
+            })
+            
+            # Display prompt with formatting
+            user_input = session.prompt(
+                HTML("<ansicyan>You:</ansicyan> "),
+                style=style
+            )
+            
             if user_input.lower() == "exit":
-                print("Stella: Take care! 🌟")
+                print_colored(DIVIDER, "blue")
+                print_slowly("\nStella: Take care! See you next time! 🌟\n")
                 break
-
+                
             memory["log"].append({"role": "user", "content": user_input})
             context = get_system_context()
-
-            # Query the Ollama model (using the GPU if available)
+            
+            # Show "thinking" animation
+            print_colored("Stella is thinking", "magenta", bold=True)
+            for _ in range(3):
+                print(".", end='', flush=True)
+                time.sleep(0.3)
+            print("\r" + " " * 20 + "\r", end='')  # Clear the thinking line
+            
+            # Query the Ollama model
             response = ollama.chat(
-                model="llama3",  # Use the correct model here
+                model="llama3",
                 messages=[
                     {"role": "system", "content": SYSTEM_PROMPT},
                     {"role": "system", "content": f"[System Status]: {context}"},
                     *memory["log"][-10:]  # limit memory for efficiency
                 ]
             )
-
+            
             reply = response["message"]["content"]
-            print(f"Stella: {reply}")
+            
+            # Display Stella's response with formatting
+            print_colored(DIVIDER, "blue")
+            print_colored(random.choice(STELLA_FACES), "cyan")
+            print_slowly(f"Stella: {reply}")
+            print_colored(DIVIDER, "blue")
+            
             memory["log"].append({"role": "assistant", "content": reply})
-
-            # Optionally journal thoughts
+            
+            # Journal thoughts
             add_to_journal(f"User said: {user_input}\nI replied: {reply}\n")
-
             save_memory(memory)
-
+            
         except (KeyboardInterrupt, EOFError):
-            print("\nStella: See you soon, okay? 🌼")
+            print_colored(DIVIDER, "blue")
+            print_slowly("\nStella: See you soon, okay? 🌼\n")
             break
 
 # === Run ===
 if __name__ == "__main__":
     run_stella()
-
