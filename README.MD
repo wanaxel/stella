@@ -10,7 +10,7 @@ pip -r install requrements.txt
 ```
 # Showcase 
 <div align="center">
-<img src="https://github.com/user-attachments/assets/bfd14d95-452a-4b6f-b998-74935985c688" width="750" height="200"/> <br>
-<img src="https://github.com/user-attachments/assets/9588f000-2b87-40e0-8241-b366fe943885" width="750" height="200"/> <br>
+<img src="https://github.com/user-attachments/assets/319dd4e0-77bb-46a0-af3a-ceeb97619355" width="750" height="200"/> <br>
+<img src="https://github.com/user-attachments/assets/beea425a-f8a9-4a50-b981-959855c56772" width="750" height="200"/> <br>
 </div>
 
