@@ -47,7 +47,10 @@ python stella.py
 <img src="https://github.com/user-attachments/assets/beea425a-f8a9-4a50-b981-959855c56772" width="750" height="200"/> <br>
 </div>
 
+---
+<details>
+  <summary>🧡 Credits</summary>
 
-🧡 Credits
+  Made with laziness and love by wanaxel.
+</details>
 
-Made with laziness and love by wanaxel.
