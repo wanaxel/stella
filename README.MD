@@ -6,9 +6,9 @@ Stella is powered by the **LLaMA 3 model via Ollama**, making her fast, local, a
 ---
 ## 🛠 Features
 
-🧠 Persistent memory with `memory.json`
-💬 Personalized chat with a gentle, thoughtful tone
-🖥️ Runs entirely in your terminal – no UI needed
+🧠 Persistent memory with `memory.json`<br>
+💬 Personalized chat with a gentle, thoughtful tone<br>
+🖥️ Runs entirely in your terminal – no UI needed<br>
 
 ---
 
