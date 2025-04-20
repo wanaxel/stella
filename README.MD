@@ -7,11 +7,11 @@ Stella its a companion bot that will record memory in the memory.json, it have f
 git clone https://github.com/wanaxel/stella.git
 cd stella 
 pip -r install requrements.txt
-python main.py
+python stella.py
 ```
 # Showcase 
 <div align="center">
+<img src="https://github.com/user-attachments/assets/c3500ba2-8eaf-437a-a6df-e9c97c555cce" width="750" height="200"/> <br>
 <img src="https://github.com/user-attachments/assets/319dd4e0-77bb-46a0-af3a-ceeb97619355" width="750" height="200"/> <br>
 <img src="https://github.com/user-attachments/assets/beea425a-f8a9-4a50-b981-959855c56772" width="750" height="200"/> <br>
 </div>
-
