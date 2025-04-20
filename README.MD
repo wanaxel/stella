@@ -33,7 +33,7 @@ brew install ollama
 ```bash
 ollama pull llama3
 ```
-###3. 🐍 Clone and run stella (i recommend you use virtual environtment)
+### 3. 🐍 Clone and run stella (i recommend you use virtual environtment)
 ```bash
 git clone https://github.com/wanaxel/stella.git
 cd stella
