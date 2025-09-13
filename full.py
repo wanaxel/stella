@@ -458,13 +458,7 @@ class Stella:
                 if len(self.memory.memory["log"]) % 10 == 0:
                     thought = f"User said: {user_input}\nI replied: {reply}\n"
                     self.memory.add_to_journal(thought)
-                
-                end_time = time.time()
-                response_time = end_time - start_time
-                
-                if response_time > 15 and self.suggest_smaller_model:
-                    reply += f"\n\n(Response took {response_time:.1f}s using {model} - consider using 'ollama pull llama3.2:3b' for faster responses)"
-                
+                     
                 return reply
                 
             except Exception as e:
