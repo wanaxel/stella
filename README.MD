@@ -29,7 +29,7 @@ brew install ollama
 1. Download and install the latest [Ollama Windows installer](https://ollama.com/download/windows)
 2. Make sure ollama is accessible in your terminal 
 
-### 2. 🧠 Pull the LLaMA 3 model
+### 2. 🧠 Pull the LLaMA 3 model (you can use other model if you want)
 ```bash
 ollama pull llama3
 ```
