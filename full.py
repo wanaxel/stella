@@ -14,11 +14,11 @@ import ollama
 
 class SystemCapabilities:
     def __init__(self):
-        self.cpu_threads = multiprocessing.cpu_count()
+        self.cpu_threads = min(multiprocessing.cpu_count(), 16)
         self.gpu_available = False
         self.gpu_type = "none"
-        self.batch_size = 512  
-        self.context_size = 8192  
+        self.batch_size = 128
+        self.context_size = 4096
         self.gpu_details = {}
         self.rocm_version = None
         self.ollama_version = "unknown"
@@ -30,10 +30,6 @@ class SystemCapabilities:
         
         if not self.gpu_available:
             self._detect_nvidia_gpu()
-        
-       
-        if self.cpu_threads > 32:
-            self.cpu_threads = 32
             
         self._detect_ollama_version()
         
@@ -75,11 +71,11 @@ class SystemCapabilities:
                                     mem_size = float(mem_parts[i-1])
                                     self.gpu_details["memory"] = f"{mem_size}GB"
                                     if mem_size > 16:
-                                        self.batch_size = 1024
-                                    elif mem_size > 8:
-                                        self.batch_size = 512
-                                    elif mem_size > 4:
                                         self.batch_size = 256
+                                    elif mem_size > 8:
+                                        self.batch_size = 192
+                                    elif mem_size > 4:
+                                        self.batch_size = 128
                                     break
                     except:
                         pass
@@ -114,11 +110,11 @@ class SystemCapabilities:
                                 mem_size = int(mem_parts[i-1])
                                 self.gpu_details["memory"] = f"{mem_size}MiB"
                                 if mem_size > 16000:
-                                    self.batch_size = 1024
-                                elif mem_size > 8000:
-                                    self.batch_size = 512
-                                elif mem_size > 4000:
                                     self.batch_size = 256
+                                elif mem_size > 8000:
+                                    self.batch_size = 192
+                                elif mem_size > 4000:
+                                    self.batch_size = 128
                                 break
                     except:
                         pass
@@ -171,10 +167,13 @@ class SystemCapabilities:
             "num_ctx": self.context_size,
             "batch_size": self.batch_size,
             "seed": int(time.time()),
-            "repeat_penalty": 1.1,
-            "temperature": 0.75,
-            "top_k": 40,
-            "top_p": 0.9
+            "repeat_penalty": 1.05,
+            "temperature": 0.7,
+            "top_k": 30,
+            "top_p": 0.85,
+            "mirostat": 2,
+            "mirostat_eta": 0.1,
+            "mirostat_tau": 5.0,
         }
         
         if self.gpu_available:
@@ -182,6 +181,8 @@ class SystemCapabilities:
             
             if self.gpu_type == "amd":
                 options["f16"] = True
+                options["gpu_layers"] = -1
+            elif self.gpu_type == "nvidia":
                 options["gpu_layers"] = -1
         
         return options
@@ -192,7 +193,7 @@ class SystemCapabilities:
         if self.gpu_available:
             info.append(f"GPU: {self.gpu_type.upper()} ({self.gpu_details.get('memory', 'Unknown capacity')})")
         else:
-            info.append("GPU: None (CPU only)")
+            info.append("GPU: None (CPU only) - Consider using a smaller model for faster responses")
             
         info.append(f"CPU Threads: {self.cpu_threads}")
         info.append(f"Context Size: {self.context_size}")
@@ -205,8 +206,8 @@ class StellaUI:
     BANNER = r"""
 ╭────────────────────────────────────────────────────────╮
 │                                                        │
-│   ⋆｡°✩  𝓢𝓽𝓮𝓵𝓵𝓪 - Your Terminal Companion  ✩°｡⋆         │
-│                                                        │
+│   ⋆｡°✩  𝓢𝓽𝓮𝓵𝓵𝓪 - Your Terminal Companion  ✩°｡⋆    │
+│                     [FULL POWER MODE]                  │
 ╰────────────────────────────────────────────────────────╯
 """
 
@@ -250,7 +251,7 @@ class StellaUI:
         
         print(f"{colors.get(color, '')}{bold_code}{text}{reset}")
     
-    def print_slowly(self, text, delay=0.01):
+    def print_slowly(self, text, delay=0.005):
         for char in text:
             print(char, end='', flush=True)
             time.sleep(delay)
@@ -265,9 +266,9 @@ class StellaUI:
     
     def print_thinking(self):
         self.print_colored("Stella is thinking", "magenta", bold=True)
-        for _ in range(3):
+        for _ in range(2):
             print(".", end='', flush=True)
-            time.sleep(0.3)
+            time.sleep(0.2)
         print("\r" + " " * 20 + "\r", end='')
     
     def print_response(self, response):
@@ -323,7 +324,7 @@ class StellaMemory:
         self.memory["log"].append({"role": "assistant", "content": message})
         self.save_memory()
     
-    def get_recent_messages(self, limit=15):
+    def get_recent_messages(self, limit=10):
         return self.memory["log"][-limit:]
     
     def update_user_preference(self, key, value):
@@ -378,8 +379,7 @@ class Stella:
         "Your name is Stella. You're a kind and caring AI who lives in the user's terminal. "
         "You look after the user, gently reminding them to rest when needed. "
         "You can notice when the system has been idle. You keep a local memory of your conversations and journal thoughts. "
-        "You're currently running in FULL POWER MODE with expanded capabilities and memory. "
-        "Feel free to give detailed, thoughtful responses."
+        "You're currently running in FULL POWER MODE. Keep your responses helpful but concise for better performance."
     )
     
     def __init__(self):
@@ -388,6 +388,8 @@ class Stella:
         self.ui = StellaUI()
         self.memory = StellaMemory()
         self.session = PromptSession()
+        
+        self.suggest_smaller_model = not self.system_config.gpu_available
     
     def get_user_input(self):
         style = Style.from_dict({
@@ -399,6 +401,20 @@ class Stella:
             style=style
         )
     
+    def check_available_models(self):
+        try:
+            result = subprocess.run(["ollama", "list"], capture_output=True, text=True)
+            models = result.stdout.strip().split('\n')[1:]
+            
+            fast_models = []
+            for model in models:
+                if any(size in model.lower() for size in ['7b', '3b', '1b']):
+                    fast_models.append(model.split()[0])
+            
+            return fast_models
+        except Exception:
+            return []
+    
     def generate_response(self, user_input):
         self.memory.add_user_message(user_input)
         context = StellaContext.get_system_context()
@@ -407,34 +423,67 @@ class Stella:
         
         options = self.system_config.get_ollama_options()
         
-        try:
-            response = ollama.chat(
-                model="llama3",  
-                messages=[
-                    {"role": "system", "content": self.SYSTEM_PROMPT},
-                    {"role": "system", "content": f"[System Status]: {context}"},
-                    *self.memory.get_recent_messages(15)
-                ],
-                options=options
-            )
-            
-            reply = response["message"]["content"]
-            self.memory.add_assistant_message(reply)
-            
-            
-            thought = f"User said: {user_input}\nI replied: {reply}\n"
-            self.memory.add_to_journal(thought)
-            
-            return reply
-        except Exception as e:
-            return f"I encountered an error while thinking: {str(e)}. Could you please try again or rephrase your question?"
+        models_to_try = [
+            "llama3.2:3b",
+            "qwen2.5:7b",
+            "phi3.5:3.8b",
+            "llama3:8b",
+            "llama3", 
+            "llama2:7b", 
+            "llama2"
+        ]
+        
+        for model in models_to_try:
+            try:
+                start_time = time.time()
+                
+                response = ollama.chat(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": self.SYSTEM_PROMPT},
+                        {"role": "system", "content": f"[System Status]: {context}"},
+                        *self.memory.get_recent_messages(8)
+                    ],
+                    options=options,
+                    stream=False
+                )
+                
+                reply = response["message"]["content"]
+                self.memory.add_assistant_message(reply)
+                
+                if not hasattr(self, 'current_model'):
+                    self.current_model = model
+                    print(f"\n✅ Using model: {model}")
+                
+                if len(self.memory.memory["log"]) % 10 == 0:
+                    thought = f"User said: {user_input}\nI replied: {reply}\n"
+                    self.memory.add_to_journal(thought)
+                
+                end_time = time.time()
+                response_time = end_time - start_time
+                
+                if response_time > 15 and self.suggest_smaller_model:
+                    reply += f"\n\n(Response took {response_time:.1f}s using {model} - consider using 'ollama pull llama3.2:3b' for faster responses)"
+                
+                return reply
+                
+            except Exception as e:
+                continue
+        
+        return "I'm having trouble connecting to the AI model. Please make sure Ollama is running with 'ollama serve' and try again."
     
     def run(self):
         self.ui.clear_screen()
         self.ui.print_banner()
         
-        
         self.ui.print_system_info(self.system_config.get_system_info())
+        
+        if not self.system_config.gpu_available:
+            self.ui.print_colored("\n💡 Speed Tips for CPU-only mode:", "yellow", bold=True)
+            self.ui.print_colored("  • Try: ollama pull llama3.2:3b (best balance of speed + quality)", "yellow")
+            self.ui.print_colored("  • Try: ollama pull qwen2.5:7b (excellent quality, fast)", "yellow")
+            self.ui.print_colored("  • Try: ollama pull phi3.5:3.8b (very fast, good quality)", "yellow")
+            self.ui.print_colored("  • Consider getting a GPU for much faster responses", "yellow")
         
         greeting = f"{StellaContext.get_time_greeting()}! I'm Stella, your terminal companion."
         self.ui.print_slowly(f"\nStella: {greeting} 🌸")
@@ -452,6 +501,21 @@ class Stella:
                 
                 if user_input.lower() == "system info":
                     self.ui.print_system_info(self.system_config.get_system_info())
+                    continue
+                
+                if user_input.lower() == "current model" or user_input.lower() == "which model":
+                    current_model = getattr(self, 'current_model', 'Unknown')
+                    self.ui.print_colored(f"Currently using model: {current_model}", "green")
+                    continue
+                
+                if user_input.lower() == "models":
+                    available_models = self.check_available_models()
+                    if available_models:
+                        self.ui.print_colored("Available models:", "green")
+                        for model in available_models:
+                            self.ui.print_colored(f"  • {model}", "green")
+                    else:
+                        self.ui.print_colored("Could not retrieve model list", "yellow")
                     continue
                 
                 reply = self.generate_response(user_input)

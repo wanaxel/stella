@@ -12,11 +12,11 @@ import ollama
 
 class SystemCapabilities:
     def __init__(self):
-        self.cpu_threads = 2  
+        self.cpu_threads = 2
         self.gpu_available = False
         self.gpu_type = "none"
-        self.batch_size = 32  
-        self.context_size = 2048  
+        self.batch_size = 32
+        self.context_size = 2048
         
     def get_ollama_options(self):
         return {
@@ -34,8 +34,8 @@ class StellaUI:
     BANNER = """
 ╭────────────────────────────────────────────────────────╮
 │                                                        │
-│      ⋆｡°✩  𝓢𝓽𝓮𝓵𝓵𝓪 - Your Terminal Companion  ✩°｡⋆      │
-│                                                        │
+│      ⋆｡°✩  𝓢𝓽𝓮𝓵𝓵𝓪 - Your Terminal Companion  ✩°｡⋆    │
+│                         [LOW MEMORY MODE]              │
 ╰────────────────────────────────────────────────────────╯
 """
 
@@ -107,8 +107,8 @@ class StellaMemory:
         self.memory_file = memory_file
         self.journal_file = journal_file
         self.memory = self.load_memory()
-        self.max_history = 5  
-
+        self.max_history = 5
+    
     def load_memory(self):
         if os.path.exists(self.memory_file):
             try:
@@ -119,7 +119,6 @@ class StellaMemory:
         return {"log": []}
     
     def save_memory(self):
-        
         if len(self.memory["log"]) > self.max_history * 2:
             self.memory["log"] = self.memory["log"][-self.max_history*2:]
             
@@ -127,7 +126,6 @@ class StellaMemory:
             json.dump(self.memory, f, indent=2)
     
     def add_to_journal(self, thought):
-        
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
         with open(self.journal_file, "a") as f:
             f.write(f"[{timestamp}] {thought}\n")
@@ -148,6 +146,7 @@ class StellaMemory:
     
     def get_recent_messages(self, limit=5):
         return self.memory["log"][-limit*2:]
+
 
 class StellaContext:
     @staticmethod
@@ -191,22 +190,27 @@ class Stella:
         
         options = self.system_config.get_ollama_options()
         
-        try:
-            response = ollama.chat(
-                model="llama3",  
-                messages=[
-                    {"role": "system", "content": self.SYSTEM_PROMPT},
-                    *self.memory.get_recent_messages(5)
-                ],
-                options=options
-            )
-            
-            reply = response["message"]["content"]
-            self.memory.add_assistant_message(reply)
-            
-            return reply
-        except Exception as e:
-            return f"I'm having trouble thinking (error: {str(e)}). Let's try again with a simpler question."
+        models_to_try = ["llama3.2:3b", "llama3:8b", "llama3", "llama2:7b", "llama2"]
+        
+        for model in models_to_try:
+            try:
+                response = ollama.chat(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": self.SYSTEM_PROMPT},
+                        *self.memory.get_recent_messages(5)
+                    ],
+                    options=options
+                )
+                
+                reply = response["message"]["content"]
+                self.memory.add_assistant_message(reply)
+                
+                return reply
+            except Exception:
+                continue
+        
+        return f"I'm having trouble thinking. Let's try again with a simpler question."
     
     def run(self):
         self.ui.clear_screen()
