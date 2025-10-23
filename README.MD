@@ -40,6 +40,11 @@ cd stella
 pip install -r requirements.txt
 python stella.py
 ```
+ <details> <summary><b>For easier installation in Windows</b></summary>
+
+👉 Click here for the Windows setup guide
+</details> ```
+
 # Showcase 
 <div align="center">
 <img src="https://github.com/user-attachments/assets/c3500ba2-8eaf-437a-a6df-e9c97c555cce" width="750" height="200"/> <br>
