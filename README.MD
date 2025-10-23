@@ -41,9 +41,8 @@ pip install -r requirements.txt
 python stella.py
 ```
  <details> <summary><b>For easier installation in Windows</b></summary>
-
-👉 Click here for the Windows setup guide
-</details> ```
+https://github.com/wanaxel/stella/releases/tag/Stella
+</details> 
 
 # Showcase 
 <div align="center">
