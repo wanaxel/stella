@@ -40,7 +40,7 @@ cd stella
 pip install -r requirements.txt
 python stella.py
 ```
- <details> <summary><b>For easier installation in Windows</b></summary>
+ <details> <summary><b>For easier installation in Windows (yes you still need to download the ollama)</b></summary>
 https://github.com/wanaxel/stella/releases/tag/Stella
 </details> 
 
